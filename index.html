@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İnteraktif Akvaryum Ekran Koruyucu</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #008ebf, #001e36); /* Su altı derinlik efekti */
+            touch-action: none; /* Mobilde kaydırmayı engeller */
+        }
+        canvas {
+            display: block;
+        }
+        .bilgi {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-family: sans-serif;
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bilgi">Ekrana dokunarak yem atın. Her 5 dokunuşta bir yumurta bırakılır!</div>
+    <canvas id="akvaryum"></canvas>
+
+    <script>
+        const canvas = document.getElementById('akvaryum');
+        const ctx = canvas.getContext('2d');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        let dokunmaSayisi = 0;
+        const yemler = [];
+        const yumurtalar = [];
+        const baliklar = [];
+        const balikEmojileri = ['🐟', '🐠', '🐡'];
+
+        // Balık Sınıfı
+        class Balik {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.boyut = Math.random() * 30 + 40;
+                this.hizX = (Math.random() - 0.5) * 2;
+                this.hizY = (Math.random() - 0.5) * 1;
+                this.emoji = balikEmojileri[Math.floor(Math.random() * balikEmojileri.length)];
+                this.yon = this.hizX > 0 ? 1 : -1;
+            }
+            guncelle() {
+                this.x += this.hizX;
+                this.y += this.hizY;
+
+                // Ekran sınırlarından dönme
+                if (this.x > canvas.width + 50) { this.x = -50; this.yon = 1; }
+                if (this.x < -50) { this.x = canvas.width + 50; this.yon = -1; }
+                if (this.y > canvas.height - 50 || this.y < 50) this.hizY *= -1;
+            }
+            ciz() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.hizX < 0) {
+                    ctx.scale(-1, 1); // Sola gidiyorsa emojiyi çevir
+                }
+                ctx.font = `${this.boyut}px Arial`;
+                ctx.fillText(this.emoji, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        // Yem Sınıfı
+        class Yem {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.boyut = 3; // Küçücük yem
+                this.hizY = Math.random() * 1 + 1; // Yavaşça dibe çöker
+            }
+            guncelle() {
+                this.y += this.hizY;
+            }
+            ciz() {
+                ctx.fillStyle = '#8B4513'; // Kahverengi yem rengi
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.boyut, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Yumurta Sınıfı
+        class Yumurta {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.boyut = 2; // Çok küçük başlar
+                this.hedefBoyut = 20; // Normal yumurta boyutu
+                this.hizY = 2; // Yemden biraz daha hızlı düşer
+            }
+            guncelle() {
+                // Dibe ulaşana kadar düşsün
+                if (this.y < canvas.height - this.hedefBoyut) {
+                    this.y += this.hizY;
+                }
+                // Yavaş yavaş normal boyuta gelsin
+                if (this.boyut < this.hedefBoyut) {
+                    this.boyut += 0.05; 
+                }
+            }
+            ciz() {
+                ctx.fillStyle = '#ffffe0'; // Açık sarı/beyaz yumurta rengi
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.boyut * 0.8, this.boyut, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Yumurtaya hafif parlaklık
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath();
+                ctx.ellipse(this.x - this.boyut*0.2, this.y - this.boyut*0.2, this.boyut * 0.2, this.boyut*0.3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Başlangıç için birkaç balık ekle
+        for (let i = 0; i < 8; i++) {
+            baliklar.push(new Balik());
+        }
+
+        // Etkileşim (Tıklama ve Dokunma)
+        function etkilesim(e) {
+            let x = e.clientX || (e.touches && e.touches[0].clientX);
+            let y = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            if (x === undefined || y === undefined) return;
+
+            dokunmaSayisi++;
+
+            if (dokunmaSayisi % 5 === 0) {
+                // Her 5 dokunuşta 1 yumurta
+                yumurtalar.push(new Yumurta(x, y));
+            } else {
+                // Normal dokunuşta yem
+                yemler.push(new Yem(x, y));
+            }
+        }
+
+        window.addEventListener('click', etkilesim);
+        window.addEventListener('touchstart', etkilesim);
+
+        // Animasyon Döngüsü
+        function animasyon() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Arka plandan ışık huzmeleri efekti (opsiyonel basitlikte)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, -100);
+            ctx.lineTo(canvas.width / 2 - 200, canvas.height);
+            ctx.lineTo(canvas.width / 2 + 200, canvas.height);
+            ctx.fill();
+
+            // Yumurtaları çiz ve güncelle
+            for (let i = yumurtalar.length - 1; i >= 0; i--) {
+                yumurtalar[i].guncelle();
+                yumurtalar[i].ciz();
+            }
+
+            // Yemleri çiz ve güncelle
+            for (let i = yemler.length - 1; i >= 0; i--) {
+                yemler[i].guncelle();
+                yemler[i].ciz();
+                // Yem ekranın altına düştüyse sil
+                if (yemler[i].y > canvas.height) {
+                    yemler.splice(i, 1);
+                }
+            }
+
+            // Balıkları çiz ve güncelle
+            baliklar.forEach(balik => {
+                balik.guncelle();
+                balik.ciz();
+            });
+
+            requestAnimationFrame(animasyon);
+        }
+
+        animasyon();
+    </script>
+</body>
+</html>
