@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İnteraktif Akvaryum Ekran Koruyucu</title>
+    <title>Yapay Zekalı Akvaryum Ekosistemi</title>
     <style>
         body, html {
             margin: 0;
@@ -11,26 +11,47 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: linear-gradient(to bottom, #008ebf, #001e36); /* Su altı derinlik efekti */
-            touch-action: none; /* Mobilde kaydırmayı engeller */
+            background: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiPgogICAgPGRlZnM+CiAgICAgICAgPGxpbmVhckdyYWRpZW50IGlkPSJ3YXRlckdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj4KICAgICAgICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzAwOGZiMyIgLz4KICAgICAgICAgICAgPHN0b3Agb2Zmc2V0PSI2MCUiIHN0b3AtY29sb3I9IiMwMDViODIiIC8+CiAgICAgICAgICAgIDxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzAwMWUzNiIgLz4KICAgICAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPC9kZWZzPgogICAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCN3YXRlckdyYWQpIiAvPgogICAgPCEtLSBLdW0gemVtaW4gLS0+CiAgICA8cGF0aCBkPSJNMCw5MDAgUTQ4MCw4NTAgOTYwLDk1MCBUMTkyMCw5MDAgTDE5MjAsMTA4MCBMMCwxMDgwIFoiIGZpbGw9IiNiMDljNmYiIC8+CiAgICA8cGF0aCBkPSJNMCw5NTAgUTMwMCw5MDAgODAwLDEwMDAgVDE5MjAsOTgwIEwxOTIwLDEwODAgTDAsMTA4MCBaIiBmaWxsPSIjOGI3YjU3IiBvcGFjaXR5PSIwLjYiLz4KICAgIDwhLS0gQmFzaXQga2F5YWxhciAtLT4KICAgIDxwYXRoIGQ9Ik0xNTAsMTAwMCBRMjUwLDg1MCA0MDAsMTAwMCBaIiBmaWxsPSIjM2E0YjVjIiAvPgogICAgPHBhdGggZD0iTTE0MDAsMTA1MCBRMTYwMCw3NTAgMTgwMCwxMDUwIFoiIGZpbGw9IiMyYzNhNDciIC8+CiAgICA8cGF0aCBkPSJNMTIwMCwxMDIwIFExMzAwLDkwMCAxNDUwLDEwMjAgWiIgZmlsbD0iIzRiNWQ2ZSIgLz4KPC9zdmc+') no-repeat center center fixed; 
+            background-size: cover;
+            touch-action: none;
         }
+
+        .light-rays {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.4) 100%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
         canvas {
             display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
+        
         .bilgi {
             position: absolute;
-            top: 20px;
-            left: 20px;
-            color: rgba(255, 255, 255, 0.7);
-            font-family: sans-serif;
+            top: 15px;
+            left: 15px;
+            color: rgba(255,255,255,0.7);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 2;
             pointer-events: none;
-            user-select: none;
+            text-shadow: 1px 1px 2px black;
         }
     </style>
 </head>
 <body>
 
-    <div class="bilgi">Ekrana dokunarak yem atın. Her 5 dokunuşta bir yumurta bırakılır!</div>
+    <div class="light-rays"></div>
+    <div class="bilgi">Ekrana dokunarak yem atın. Balıklar yedikçe büyür ve yumurtlar.</div>
     <canvas id="akvaryum"></canvas>
 
     <script>
@@ -44,57 +65,37 @@
         window.addEventListener('resize', resize);
         resize();
 
-        let dokunmaSayisi = 0;
+        // Görselleri Yükle
+        const balikResmi = new Image();
+        balikResmi.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICAgIDxwYXRoIGQ9Ik0gODUsNTAgTCAxMDAsMjAgTCA5MCw1MCBMIDEwMCw4MCBaIiBmaWxsPSIjZmZjYzAwIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMSIgLz4KICAgIDxwYXRoIGQ9Ik0gODUsNTAgTCA5NSwzNSBMIDkwLDUwIEwgOTUsNjUgWiIgZmlsbD0iIzAwMCIgLz4KICAgIDxlbGxpcHNlIGN4PSI1MCIgY3k9IjUwIiByeD0iMzgiIHJ5PSIyNiIgZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjEiIC8+CiAgICA8cGF0aCBkPSJNIDQwLDI2IFEgNTAsNTAgNDAsNzQgTCA1NSw3NSBRIDY1LDUwIDU1LDI1IFoiIGZpbGw9IiMwMDAiIC8+CiAgICA8cGF0aCBkPSJNIDY1LDMwIFEgNzUsNTAgNjUsNzAgTCA3NSw2NSBRIDgwLDUwIDc1LDM1IFoiIGZpbGw9IiNmZmNjMDAiIC8+CiAgICA8cGF0aCBkPSJNIDUwLDI0IFEgNDAsNSAyMCwwIFEgMzAsMTUgNDAsMjUgWiIgZmlsbD0iI2ZmZiIgc3Ryb2tlPSIjMDAwIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgIDxwYXRoIGQ9Ik0gNTAsNzYgUSA0MCw5MCAzMCw5NSBRIDM1LDg1IDQ1LDc1IFoiIGZpbGw9IiMwMDAiIC8+CiAgICA8cGF0aCBkPSJNIDMwLDMwIFEgMTAsNTAgMzAsNzAgWiIgZmlsbD0iI2ZmY2MwMCIgLz4KICAgIDxjaXJjbGUgY3g9IjIyIiBjeT0iNDUiIHI9IjQiIGZpbGw9IiMwMDAiIC8+CiAgICA8Y2lyY2xlIGN4PSIyMSIgY3k9IjQ0IiByPSIxLjUiIGZpbGw9IiNmZmYiIC8+CiAgICA8cGF0aCBkPSJNIDEyLDUwIFEgOCw1MCAxMiw1NCBaIiBmaWxsPSIjMzMzIiAvPgogICAgPHBhdGggZD0iTSA0NSw1NSBRIDM1LDY1IDUwLDY1IFoiIGZpbGw9IiNmZmNjMDAiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==';
+
+        const yumurtaResmi = new Image();
+        yumurtaResmi.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MCA1MCI+CiAgICA8ZWxsaXBzZSBjeD0iMjUiIGN5PSIyNSIgcng9IjE2IiByeT0iMjIiIGZpbGw9IiNmZmI2YzEiIG9wYWNpdHk9IjAuOCIgLz4KICAgIDxjaXJjbGUgY3g9IjI1IiBjeT0iMjgiIHI9IjYiIGZpbGw9IiNmZjY5YjQiIG9wYWNpdHk9IjAuNiIvPgogICAgPGVsbGlwc2UgY3g9IjIwIiBjeT0iMTUiIHJ4PSI1IiByeT0iOCIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC43IiB0cmFuc2Zvcm09InJvdGF0ZSgtMzAgMjAgMTUpIiAvPgogICAgPGVsbGlwc2UgY3g9IjMyIiBjeT0iMzUiIHJ4PSIyIiByeT0iNCIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC40IiB0cmFuc2Zvcm09InJvdGF0ZSgtNDUgMzIgMzUpIiAvPgo8L3N2Zz4=';
+
         const yemler = [];
         const yumurtalar = [];
         const baliklar = [];
-        const balikEmojileri = ['🐟', '🐠', '🐡'];
 
-        // Balık Sınıfı
-        class Balik {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.boyut = Math.random() * 30 + 40;
-                this.hizX = (Math.random() - 0.5) * 2;
-                this.hizY = (Math.random() - 0.5) * 1;
-                this.emoji = balikEmojileri[Math.floor(Math.random() * balikEmojileri.length)];
-                this.yon = this.hizX > 0 ? 1 : -1;
-            }
-            guncelle() {
-                this.x += this.hizX;
-                this.y += this.hizY;
-
-                // Ekran sınırlarından dönme
-                if (this.x > canvas.width + 50) { this.x = -50; this.yon = 1; }
-                if (this.x < -50) { this.x = canvas.width + 50; this.yon = -1; }
-                if (this.y > canvas.height - 50 || this.y < 50) this.hizY *= -1;
-            }
-            ciz() {
-                ctx.save();
-                ctx.translate(this.x, this.y);
-                if (this.hizX < 0) {
-                    ctx.scale(-1, 1); // Sola gidiyorsa emojiyi çevir
-                }
-                ctx.font = `${this.boyut}px Arial`;
-                ctx.fillText(this.emoji, 0, 0);
-                ctx.restore();
-            }
-        }
+        const YETISKIN_BOYUT = 90; 
+        const YAVRU_BOYUT = 30;
+        const YUMURTLAMA_SINIRI = 3; 
+        const BUYUME_HIZI = 20; 
 
         // Yem Sınıfı
         class Yem {
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.boyut = 3; // Küçücük yem
-                this.hizY = Math.random() * 1 + 1; // Yavaşça dibe çöker
+                this.boyut = 4;
+                this.hizY = 1.5;
+                this.aktif = true;
             }
             guncelle() {
                 this.y += this.hizY;
+                if (this.y > canvas.height) this.aktif = false;
             }
             ciz() {
-                ctx.fillStyle = '#8B4513'; // Kahverengi yem rengi
+                ctx.fillStyle = '#D2B48C';
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.boyut, 0, Math.PI * 2);
                 ctx.fill();
@@ -106,89 +107,159 @@
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.boyut = 2; // Çok küçük başlar
-                this.hedefBoyut = 20; // Normal yumurta boyutu
-                this.hizY = 2; // Yemden biraz daha hızlı düşer
+                this.boyut = 20;
+                this.hizY = 2;
+                this.catlamaSuresi = 180; 
+                this.aktif = true;
             }
             guncelle() {
-                // Dibe ulaşana kadar düşsün
-                if (this.y < canvas.height - this.hedefBoyut) {
-                    this.y += this.hizY;
-                }
-                // Yavaş yavaş normal boyuta gelsin
-                if (this.boyut < this.hedefBoyut) {
-                    this.boyut += 0.05; 
+                if (this.y < canvas.height - 40) {
+                    this.y += this.hizY; 
+                } else {
+                    this.catlamaSuresi--; 
+                    if (this.catlamaSuresi <= 0) {
+                        this.aktif = false;
+                        baliklar.push(new Balik(this.x, this.y, true)); 
+                    }
                 }
             }
             ciz() {
-                ctx.fillStyle = '#ffffe0'; // Açık sarı/beyaz yumurta rengi
-                ctx.beginPath();
-                ctx.ellipse(this.x, this.y, this.boyut * 0.8, this.boyut, 0, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Yumurtaya hafif parlaklık
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.beginPath();
-                ctx.ellipse(this.x - this.boyut*0.2, this.y - this.boyut*0.2, this.boyut * 0.2, this.boyut*0.3, 0, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.drawImage(yumurtaResmi, this.x - this.boyut/2, this.y - this.boyut/2, this.boyut, this.boyut);
             }
         }
 
-        // Başlangıç için birkaç balık ekle
-        for (let i = 0; i < 8; i++) {
-            baliklar.push(new Balik());
+        // Akıllı Balık Sınıfı
+        class Balik {
+            constructor(x, y, yavruMu = false) {
+                this.x = x;
+                this.y = y;
+                this.boyut = yavruMu ? YAVRU_BOYUT : YETISKIN_BOYUT;
+                this.yetiskinMi = !yavruMu;
+                this.yenenYem = 0;
+                this.vx = (Math.random() - 0.5) * 3;
+                this.vy = (Math.random() - 0.5) * 2;
+                this.hiz = yavruMu ? 3.5 : 2.5; 
+            }
+
+            guncelle() {
+                let hedef = null;
+                let enKisaMesafe = Infinity;
+
+                for (let yem of yemler) {
+                    if (yem.aktif) {
+                        let mesafe = Math.hypot(yem.x - this.x, yem.y - this.y);
+                        if (mesafe < enKisaMesafe) {
+                            enKisaMesafe = mesafe;
+                            hedef = yem;
+                        }
+                    }
+                }
+
+                if (hedef) {
+                    let dx = hedef.x - this.x;
+                    let dy = hedef.y - this.y;
+                    
+                    if (enKisaMesafe < this.boyut / 2) {
+                        hedef.aktif = false; 
+                        this.yemYedi();
+                    } else {
+                        this.vx = (dx / enKisaMesafe) * this.hiz;
+                        this.vy = (dy / enKisaMesafe) * this.hiz;
+                    }
+                } else {
+                    if (Math.random() < 0.02) {
+                        this.vx += (Math.random() - 0.5) * 1;
+                        this.vy += (Math.random() - 0.5) * 1;
+                        
+                        let mevcutHiz = Math.hypot(this.vx, this.vy);
+                        this.vx = (this.vx / mevcutHiz) * this.hiz;
+                        this.vy = (this.vy / mevcutHiz) * this.hiz;
+                    }
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x > canvas.width - this.boyut/2) this.vx *= -1;
+                if (this.x < this.boyut/2) this.vx *= -1;
+                if (this.y > canvas.height - this.boyut/2) this.vy *= -1;
+                if (this.y < this.boyut/2) this.vy *= -1;
+            }
+
+            yemYedi() {
+                this.yenenYem++;
+                if (!this.yetiskinMi) {
+                    this.boyut += BUYUME_HIZI;
+                    if (this.boyut >= YETISKIN_BOYUT) {
+                        this.yetiskinMi = true;
+                        this.boyut = YETISKIN_BOYUT;
+                        this.yenenYem = 0; 
+                    }
+                } else {
+                    if (this.yenenYem >= YUMURTLAMA_SINIRI) {
+                        yumurtalar.push(new Yumurta(this.x, this.y));
+                        this.yenenYem = 0; 
+                    }
+                }
+            }
+
+            ciz() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                if (this.vx > 0) {
+                    ctx.scale(-1, 1);
+                }
+                
+                ctx.drawImage(balikResmi, -this.boyut / 2, -this.boyut / 2, this.boyut, this.boyut);
+                ctx.restore();
+            }
         }
 
-        // Etkileşim (Tıklama ve Dokunma)
-        function etkilesim(e) {
+        let resimSayisi = 0;
+        function baslat() {
+            resimSayisi++;
+            if (resimSayisi === 2) {
+                baliklar.push(new Balik(canvas.width/3, canvas.height/2, false));
+                baliklar.push(new Balik(canvas.width/1.5, canvas.height/2, false));
+                animasyon();
+            }
+        }
+        
+        balikResmi.onload = baslat;
+        yumurtaResmi.onload = baslat;
+
+        function yemAt(e) {
             let x = e.clientX || (e.touches && e.touches[0].clientX);
             let y = e.clientY || (e.touches && e.touches[0].clientY);
-            
             if (x === undefined || y === undefined) return;
-
-            dokunmaSayisi++;
-
-            if (dokunmaSayisi % 5 === 0) {
-                // Her 5 dokunuşta 1 yumurta
-                yumurtalar.push(new Yumurta(x, y));
-            } else {
-                // Normal dokunuşta yem
-                yemler.push(new Yem(x, y));
-            }
+            yemler.push(new Yem(x, y));
         }
 
-        window.addEventListener('click', etkilesim);
-        window.addEventListener('touchstart', etkilesim);
+        window.addEventListener('click', yemAt);
+        window.addEventListener('touchstart', yemAt);
 
-        // Animasyon Döngüsü
         function animasyon() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Arka plandan ışık huzmeleri efekti (opsiyonel basitlikte)
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, -100);
-            ctx.lineTo(canvas.width / 2 - 200, canvas.height);
-            ctx.lineTo(canvas.width / 2 + 200, canvas.height);
-            ctx.fill();
-
-            // Yumurtaları çiz ve güncelle
             for (let i = yumurtalar.length - 1; i >= 0; i--) {
-                yumurtalar[i].guncelle();
-                yumurtalar[i].ciz();
+                if (yumurtalar[i].aktif) {
+                    yumurtalar[i].guncelle();
+                    yumurtalar[i].ciz();
+                } else {
+                    yumurtalar.splice(i, 1);
+                }
             }
 
-            // Yemleri çiz ve güncelle
             for (let i = yemler.length - 1; i >= 0; i--) {
-                yemler[i].guncelle();
-                yemler[i].ciz();
-                // Yem ekranın altına düştüyse sil
-                if (yemler[i].y > canvas.height) {
+                if (yemler[i].aktif) {
+                    yemler[i].guncelle();
+                    yemler[i].ciz();
+                } else {
                     yemler.splice(i, 1);
                 }
             }
 
-            // Balıkları çiz ve güncelle
             baliklar.forEach(balik => {
                 balik.guncelle();
                 balik.ciz();
@@ -196,8 +267,6 @@
 
             requestAnimationFrame(animasyon);
         }
-
-        animasyon();
     </script>
 </body>
 </html>
